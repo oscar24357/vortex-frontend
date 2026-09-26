@@ -12,9 +12,9 @@ import { useLocalStorageDraft } from "@/hooks/useLocalStorageDraft";
 import { useWalletStore } from "@/store/wallet";
 import { timeRemaining } from "@/lib/time";
 import { isValidStellarPublicKey } from "@/lib/stellarAddress";
-import { useTranslation } from "@/lib/i18n/I18nProvider";
+import { useTranslation, useLocale } from "@/lib/i18n/I18nProvider";
 import type { MessageKey } from "@/lib/i18n";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatUsdCompact, localeToBcp47 } from "@/lib/format";
 import { sanitizeDisplayText } from "@/lib/textSafety";
 import Link from "next/link";
 
@@ -30,11 +30,6 @@ type RegistrationDraft = {
   bond: string;
 };
 
-function usdCompact(amount: number) {
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}k`;
-  return `$${amount}`;
-}
 
 function formatTimeRemaining(deadlineStr: string): string {
   const ms = new Date(deadlineStr).getTime() - Date.now();
@@ -45,6 +40,8 @@ function formatTimeRemaining(deadlineStr: string): string {
 
 export default function SolvePageClient() {
   const { t } = useTranslation();
+  const locale = useLocale();
+  const bcp47 = localeToBcp47(locale);
   const [tab, setTab] = useState<"leaderboard" | "intents" | "register">("leaderboard");
   const { solvers, isLoading: solversLoading, error: solversError } = useSolvers();
   const { intents: openIntents, isLoading: intentsLoading, error: intentsError } = useOpenIntents();
@@ -429,7 +426,7 @@ export default function SolvePageClient() {
                         </div>
                         <div>
                           <div className="num text-xs sm:text-sm font-semibold text-vx-text">
-                            {usdCompact(s.volumeUsd)}
+                            {formatUsdCompact(s.volumeUsd, bcp47)}
                           </div>
                           <div className="eyebrow text-[10px] sm:text-xs">
                             {t("solve.leaderboard.volume")}

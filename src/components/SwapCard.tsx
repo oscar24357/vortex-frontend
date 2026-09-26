@@ -8,8 +8,8 @@ import { useRecentChains } from "@/hooks/useRecentChains";
 import { useToastStore } from "@/store/toast";
 import { CHAINS, DST_TOKENS, SRC_TOKENS } from "@/lib/marketData";
 import { isValidStellarPublicKey } from "@/lib/stellarAddress";
-import { formatTokenAmount } from "@/lib/format";
-import { useTranslation } from "@/lib/i18n/I18nProvider";
+import { formatTokenAmount, formatCurrency, localeToBcp47 } from "@/lib/format";
+import { useTranslation, useLocale } from "@/lib/i18n/I18nProvider";
 import type { MessageKey } from "@/lib/i18n";
 
 export const DEFAULT_SLIPPAGE_PCT = 0.5;
@@ -78,6 +78,8 @@ export type SwapCardProps = {
 
 export function SwapCard({ initialAmount = "", previewQuote, onPreviewSubmit }: SwapCardProps = {}) {
   const { t } = useTranslation();
+  const locale = useLocale();
+  const bcp47 = localeToBcp47(locale);
 
   const [srcChain, setSrcChain] = useState("ethereum");
   const [srcToken, setSrcToken] = useState(SRC_TOKENS.ethereum![0]!);
@@ -469,7 +471,7 @@ export function SwapCard({ initialAmount = "", previewQuote, onPreviewSubmit }: 
           {srcValueUSD > 0 && (
             <div className="num text-xs text-vx-muted">
               {t("swap.from.approxValue", {
-                value: srcValueUSD.toLocaleString("en-US", {
+                value: formatCurrency(srcValueUSD, bcp47, {
                   maximumFractionDigits: 2,
                 }),
               })}
@@ -533,7 +535,7 @@ export function SwapCard({ initialAmount = "", previewQuote, onPreviewSubmit }: 
                 <div className="flex items-baseline gap-2">
                   <div className="text-3xl font-light text-vx-text num">
                     {dstAmount > 0
-                      ? formatTokenAmount(dstAmount, undefined, {
+                      ? formatTokenAmount(dstAmount, bcp47, {
                           maximumFractionDigits: dstToken.symbol === "XLM" ? 2 : 4,
                         })
                       : "0"}
@@ -544,7 +546,7 @@ export function SwapCard({ initialAmount = "", previewQuote, onPreviewSubmit }: 
                       betterWhenHigher
                       label={t("swap.to.label")}
                       format={(n) =>
-                        formatTokenAmount(n, undefined, {
+                        formatTokenAmount(n, bcp47, {
                           maximumFractionDigits: dstToken.symbol === "XLM" ? 2 : 4,
                         })
                       }
