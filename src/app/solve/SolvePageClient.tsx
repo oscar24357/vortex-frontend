@@ -52,6 +52,15 @@ export default function SolvePageClient() {
   // Draft persistence — scoped to the currently connected wallet so that
   // switching wallets never silently restores the wrong address.
   const connectedAddress = useWalletStore((s) => s.address);
+
+  // Derive whether the connected wallet is already a registered solver.
+  // Compare case-insensitively as a defensive measure — Stellar addresses
+  // are uppercase-only by spec, but normalise both sides to be safe.
+  const connectedSolver = solvers.find(
+    (s) =>
+      connectedAddress &&
+      s.address.toLowerCase() === connectedAddress.toLowerCase(),
+  ) ?? null;
   const [draft, setDraft, clearDraft] = useLocalStorageDraft<RegistrationDraft>(
     "vortex:solver-registration-draft",
     connectedAddress ?? null,
@@ -237,6 +246,29 @@ export default function SolvePageClient() {
             {getMessage("solve.hero.description")}
           </p>
         </div>
+
+        {/* ── Registered-solver banner ─────────────────────────────────── */}
+        {connectedSolver && (
+          <div
+            role="status"
+            aria-label="You are a registered solver"
+            className="mb-8 flex items-center justify-between gap-3 rounded-xl border border-vx-sage/30 bg-vx-sage-bg px-4 py-3"
+          >
+            <div className="flex items-center gap-2 text-xs text-vx-sage">
+              <span className="w-2 h-2 rounded-full bg-vx-sage flex-shrink-0" aria-hidden="true" />
+              <span>
+                You&apos;re a registered solver —{" "}
+                <strong>{sanitizeDisplayText(connectedSolver.name)}</strong>
+              </span>
+            </div>
+            <Link
+              href={`/solve/${connectedSolver.address}`}
+              className="text-xs font-semibold text-vx-sage hover:underline whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-vx-sage rounded"
+            >
+              View your profile →
+            </Link>
+          </div>
+        )}
 
         {/* Steps strip */}
         <div className="grid sm:grid-cols-3 gap-4 mb-10">
@@ -694,6 +726,17 @@ export default function SolvePageClient() {
                   ? t("solve.register.button.registered")
                   : t("solve.register.button.connect")}
               </button>
+
+              {/* Post-registration profile link */}
+              {registration.status === "success" && address && (
+                <Link
+                  href={`/solve/${address}`}
+                  className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-lg border border-vx-sage/30 text-xs font-semibold text-vx-sage hover:bg-vx-sage/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vx-sage"
+                  data-testid="solver-profile-link"
+                >
+                  View your solver profile →
+                </Link>
+              )}
             </div>
           </div>
         )}
