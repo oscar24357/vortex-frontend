@@ -10,19 +10,32 @@ import { SolverTimeline } from "@/components/SolverTimeline";
 import { SolverFillHistory } from "@/components/SolverFillHistory";
 import { useSolver } from "@/hooks/useSolver";
 import { useIntentFeed } from "@/hooks/useIntentFeed";
+import { useTranslation, useLocale } from "@/lib/i18n/I18nProvider";
+import { timeAgo } from "@/lib/time";
+import { CHAINS } from "@/lib/marketData";
 import { isValidStellarPublicKey } from "@/lib/stellarAddress";
+import { formatUsdCompact, localeToBcp47 } from "@/lib/format";
+
+/** Inline error/not-found state used within this page only. */
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div role="alert" className="card p-8 text-center text-sm text-vx-muted">
+      {message}
+    </div>
+  );
+}
 
 export default function SolverDetailPage({ params }: { params: { address: string } }) {
+  const { t } = useTranslation();
+  const locale = useLocale();
+  const bcp47 = localeToBcp47(locale);
   const isValidAddress = isValidStellarPublicKey(params.address);
   const { solver, isLoading, error } = useSolver(isValidAddress ? params.address : null);
   const { items: fillHistory, isLoading: historyLoading } = useIntentFeed();
 
   return (
     <div className="min-h-screen">
-      <Nav
-        variant="breadcrumb"
-        label={`Solver ${params.address.slice(0, 8)}`}
-      />
+      <Nav variant="breadcrumb" label={`Solver ${params.address.slice(0, 8)}`} />
 
       <main
         id="main-content"
@@ -37,7 +50,7 @@ export default function SolverDetailPage({ params }: { params: { address: string
         </Link>
 
         {!isValidAddress ? (
-          <EmptyState variant="error" message="Invalid solver address format." />
+          <EmptyState message="Invalid solver address format." />
         ) : isLoading ? (
           <div
             className="card p-6 sm:p-8 space-y-3 animate-pulse"
@@ -48,15 +61,69 @@ export default function SolverDetailPage({ params }: { params: { address: string
             <SkeletonCard rows={2} />
           </div>
         ) : error ? (
-          <EmptyState variant="error" message="Couldn't load solver details right now. Try again shortly." />
+          <EmptyState message="Couldn't load solver details right now. Try again shortly." />
         ) : !solver ? (
-          <EmptyState variant="error" message="No solver found at that address." />
+          <EmptyState message="No solver found at that address." />
         ) : (
           <>
             {/* Header card */}
             <SolverHeaderCard solver={solver} />
 
+              <div className="text-xs sm:text-sm text-vx-muted font-mono break-all">
+                Address: {params.address}
+              </div>
+
+              {/* Metrics grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                {[
+                  { label: "Fills", value: solver.fills },
+                  { label: "Failed", value: solver.failed },
+                  { label: "Success Rate", value: `${solver.successRatePct}%` },
+                  {
+                    label: "Total Volume",
+                    value: formatUsdCompact(solver.volumeUsd, bcp47),
+                  },
+                  {
+                    label: "Avg Fill Time",
+                    value: `${solver.avgFillTimeSeconds}s`,
+                  },
+                  { label: "Bond", value: formatUsdCompact(solver.bondUsd, bcp47) },
+                ].map(({ label, value }) => (
+                  <div key={label} className="bg-vx-surface/40 rounded-lg p-3">
+                    <div className="eyebrow text-[10px] sm:text-xs mb-1">
+                      {label}
+                    </div>
+                    <div className="num text-xs sm:text-sm font-semibold text-vx-text">
+                      {value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Chain coverage */}
+              <div className="pt-3 sm:pt-4 border-t border-vx-border">
+                <h2 className="eyebrow text-xs mb-2">Supported Chains</h2>
+                <div className="flex flex-wrap gap-2">
+                  {solver.chains.length > 0 ? (
+                    solver.chains.map(chain => (
+                      <span 
+                        key={chain} 
+                        className="text-xs px-2 py-1 bg-vx-surface rounded text-vx-text border border-vx-border"
+                      >
+                        {chain}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-vx-muted">
+                      No chains supported yet
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* ── Solver Timeline ─────────────────────────────────────────── */}
+
             <div className="mb-6">
               <SolverTimeline
                 solverAddress={solver.address}
@@ -65,7 +132,26 @@ export default function SolverDetailPage({ params }: { params: { address: string
               />
             </div>
 
-            {/* ── Fill history table ──────────────────────────────────────── */}
+            {/* ── Solver Timeline ─────────────────────────────────────────── */}
+
+            <div className="mb-6">
+              <SolverTimeline
+                solverAddress={solver.address}
+                fills={fillHistory}
+                isLoading={historyLoading && fillHistory.length === 0}
+              />
+            </div>
+
+            <SolverFillHistory solverAddress={solver.address} />
+          </>
+        )}
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
             <SolverFillHistory solverAddress={solver.address} />
           </>
         )}

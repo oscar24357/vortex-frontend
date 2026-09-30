@@ -1,12 +1,23 @@
 "use client";
 
+// NOTE on data source: this component filters the shared useIntentFeed (8-item
+// cap) by solver address. For a prolific solver, this will under-represent their
+// full fill history because the cap is hit by unrelated intents.  A future
+// iteration should use a dedicated `/solvers/{address}/fills` REST endpoint
+// (unbounded or paginated) rather than the broadcast feed — tracked separately.
+
 import { IntentStatusBadge } from "@/components/IntentStatusBadge";
 import { useIntentFeed } from "@/hooks/useIntentFeed";
 import { useTranslation } from "@/lib/i18n/I18nProvider";
 import { timeAgo } from "@/lib/time";
 import type { FeedItem } from "@/lib/types";
 
-export function SolverFillHistory({ solverAddress }: { solverAddress: string }) {
+export type SolverFillHistoryProps = {
+  /** Stellar address of the solver whose fills to display. */
+  solverAddress: string;
+};
+
+export function SolverFillHistory({ solverAddress }: SolverFillHistoryProps) {
   const { t } = useTranslation();
   const { items: fillHistory, isLoading, error } = useIntentFeed();
 
@@ -27,36 +38,11 @@ export function SolverFillHistory({ solverAddress }: { solverAddress: string }) 
             <div key={i} className="h-16 bg-vx-surface/40 rounded-lg animate-pulse" />
           ))}
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="card overflow-hidden">
-        <div className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-vx-border bg-vx-surface/30">
-          <h2 className="text-sm font-semibold text-vx-text">
-            Recent Fills by Solver
-          </h2>
-        </div>
-        <div
-          role="alert"
-          className="p-6 sm:p-8 text-center text-sm text-vx-muted"
-        >
+      ) : error ? (
+        <div role="alert" className="p-6 sm:p-8 text-center text-sm text-vx-muted">
           Couldn&apos;t load fill history right now.
         </div>
-      </div>
-    );
-  }
-
-  if (solverFills.length === 0) {
-    return (
-      <div className="card overflow-hidden">
-        <div className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-vx-border bg-vx-surface/30">
-          <h2 className="text-sm font-semibold text-vx-text">
-            Recent Fills by Solver
-          </h2>
-        </div>
+      ) : solverFills.length === 0 ? (
         <div className="p-6 sm:p-8 text-center">
           <p className="text-sm font-medium text-vx-text mb-1">
             {t("solverDetail.fillHistory.empty.title")}
@@ -64,47 +50,31 @@ export function SolverFillHistory({ solverAddress }: { solverAddress: string }) 
           <p className="text-xs text-vx-muted max-w-xs mx-auto">
             {t("solverDetail.fillHistory.empty.message")}
           </p>
-          <p className="text-xs text-vx-muted mt-2">
-            No fills from this solver in the history.
-          </p>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="card overflow-hidden">
-      <div className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-vx-border bg-vx-surface/30">
-        <h2 className="text-sm font-semibold text-vx-text">
-          Recent Fills by Solver
-        </h2>
-      </div>
-      <div className="divide-y divide-vx-line">
-        {solverFills.map((fill) => (
-          <div
-            key={fill.id}
-            className="px-4 sm:px-5 py-4 hover:bg-vx-surface/30 transition-colors"
-          >
-            <div className="flex flex-col gap-2">
-              <div className="flex items-start justify-between gap-4">
+      ) : (
+        <div className="divide-y divide-vx-line">
+          {solverFills.slice(0, 10).map((fill) => (
+            <div
+              key={fill.id}
+              className="px-4 sm:px-5 py-4 hover:bg-vx-surface/30 transition-colors"
+            >
+              <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="num text-xs text-vx-muted mb-1 truncate">
-                    ID: {fill.id}
-                  </div>
                   <div className="text-sm font-medium text-vx-text truncate">
                     {fill.srcAmount} {fill.srcToken} → {fill.dstToken}
                   </div>
-                  <div className="text-xs text-vx-muted mt-0.5">
-                    <span className="capitalize">{fill.srcChain}</span>
-                    <span> · {timeAgo(fill.createdAt)}</span>
+                  <div className="text-xs text-vx-muted capitalize">
+                    {fill.srcChain}
                   </div>
                 </div>
-                <IntentStatusBadge status={fill.status} />
+                <span className="text-xs text-vx-muted num flex-shrink-0">
+                  {timeAgo(fill.createdAt)}
+                </span>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

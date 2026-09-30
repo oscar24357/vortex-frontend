@@ -1,14 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { FeedItem } from "@/lib/types";
-import { SolverFillHistory } from "./SolverFillHistory";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import type { FeedItem } from "@/lib/types";
 
-const { useIntentFeedMock } = vi.hoisted(() => ({
-  useIntentFeedMock: vi.fn(),
-}));
-
-vi.mock("@/hooks/useIntentFeed", () => ({
-  useIntentFeed: useIntentFeedMock,
+const useIntentFeedMock = vi.hoisted(() => vi.fn());
+vi.mock("@/hooks/useIntentFeed", () => ({ useIntentFeed: useIntentFeedMock }));
+vi.mock("@/lib/i18n/I18nProvider", () => ({
+  useTranslation: () => ({
+    t: (k: string) => {
+      const map: Record<string, string> = {
+        "solverDetail.fillHistory.empty.title": "No fills yet",
+        "solverDetail.fillHistory.empty.message":
+          "Once this solver starts accepting and filling intents, their history will appear here.",
+      };
+      return map[k] ?? k;
+    },
+  }),
 }));
 
 vi.mock("@/components/IntentStatusBadge", () => ({
@@ -30,8 +39,46 @@ vi.mock("@/lib/time", () => ({
   },
 }));
 
+import { SolverFillHistory } from "./SolverFillHistory";
+
+const SOLVER_ADDRESS = "GBRPYHIL2CI3WHZDTOOQFC6EB4CGQOFN4QO5JTJVSXBLEDSOMETHING";
+const OTHER_ADDRESS = "GDIFFERENTSOLVERADDRESS000000000000000000000000000000000";
+
+const makeFill = (overrides: Partial<FeedItem> = {}): FeedItem => ({
+  id: "fill-1",
+  srcChain: "ethereum",
+  srcToken: "USDC",
+  srcAmount: "500",
+  dstToken: "XLM",
+  solver: SOLVER_ADDRESS,
+  status: "filled",
+  createdAt: new Date(Date.now() - 60_000).toISOString(),
+  ...overrides,
+});
+
 describe("SolverFillHistory", () => {
-  it("shows loading skeleton while fills are being fetched", () => {
+  it("shows a loading skeleton while fetching", () => {
+    useIntentFeedMock.mockReturnValue({
+      items: [],
+      isLoading: true,
+      error: undefined,
+      isLive: false,
+    });
+
+    const { container } = render(
+      <SolverFillHistory solverAddress="GBRPYHIL2CI3WHZDTOOQFC6EB4CGQOFN4QO5JTJVSXBLEDSOMETHING" />
+    );
+
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+  });
+
+  it("shows error state when fill history fails to load", () => {
+    useIntentFeedMock.mockReturnValue({
+      items: 
+    useIntentFeedMock.mockReturnValue({
+      items: [],
+      isLoading: true,
+      error: undefined,
     useIntentFeedMock.mockReturnValue({
       items: [],
       isLoading: true,
